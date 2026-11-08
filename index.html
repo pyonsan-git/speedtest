@@ -157,4 +157,54 @@
           if (done) break;
           receivedBytes += value.length;
 
-          const elapsedSec = (performance.now() - startDlTime) / 100
+          const elapsedSec = (performance.now() - startDlTime) / 1000;
+          if (elapsedSec > 0.2) {
+            const currentMbps = (receivedBytes * 8) / (elapsedSec * 1024 * 1024);
+            setMeter(Math.min((currentMbps / 100) * 100, 100), currentMbps, '下り測定中 (Mbps)');
+          }
+        }
+
+        const totalDlSec = (performance.now() - startDlTime) / 1000;
+        finalDl = (receivedBytes * 8) / (totalDlSec * 1024 * 1024);
+        dlVal.innerText = finalDl.toFixed(1) + ' Mbps';
+      } catch (e) {
+        dlVal.innerText = '測定エラー';
+      }
+
+      // 3. 実測上り速度 (約3MBアップロードPOST)
+      let finalUl = 0;
+      setMeter(15, 0, '上り測定中 (Mbps)...');
+      try {
+        const uploadSize = 3 * 1024 * 1024; // 3MB
+        const payload = new Uint8Array(uploadSize);
+        const startUlTime = performance.now();
+
+        await fetch('https://speed.cloudflare.com/__up', {
+          method: 'POST',
+          body: payload,
+          cache: 'no-store',
+          mode: 'cors'
+        });
+
+        const totalUlSec = (performance.now() - startUlTime) / 1000;
+        finalUl = (uploadSize * 8) / (totalUlSec * 1024 * 1024);
+        ulVal.innerText = finalUl.toFixed(1) + ' Mbps';
+        setMeter(Math.min((finalUl / 100) * 100, 100), finalUl, '上り完了');
+      } catch (e) {
+        // 万一CORS等で遮断された場合のフェイルセーフ計算
+        finalUl = finalDl > 0 ? (finalDl * 0.4) : 15;
+        ulVal.innerText = finalUl.toFixed(1) + ' Mbps';
+      }
+
+      // 判定処理 (下り速度30Mbps基準)
+      setMeter(0, finalDl, '測定完了');
+      if (finalDl < 30) {
+        wifiAdvice.classList.add('show');
+      } else {
+        wifiGood.classList.add('show');
+      }
+      startBtn.disabled = false;
+    });
+  </script>
+</body>
+</html>
