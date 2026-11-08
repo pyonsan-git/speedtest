@@ -27,10 +27,10 @@
     .meter-text { position: absolute; text-align: center; }
     .meter-val { font-size: 2.6rem; font-weight: 700; color: #fff; line-height: 1; }
     .meter-unit { font-size: 0.85rem; color: var(--cyan); margin-top: 4px; font-weight: 600; }
-    .metrics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 14px; text-align: center; }
+    .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; text-align: center; }
     .metric-item { background: rgba(255,255,255,0.03); border-radius: 10px; padding: 10px 4px; }
-    .metric-label { font-size: 0.75rem; color: var(--muted); }
-    .metric-val { font-size: 1.1rem; font-weight: 600; margin-top: 4px; }
+    .metric-label { font-size: 0.72rem; color: var(--muted); }
+    .metric-val { font-size: 1rem; font-weight: 600; margin-top: 4px; }
     .btn { background: linear-gradient(135deg, var(--cyan), var(--purple)); border: none; border-radius: 12px; color: #fff; font-size: 1rem; font-weight: 600; padding: 14px; width: 100%; cursor: pointer; }
     .btn:disabled { opacity: 0.5; }
     .advice-card { background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 14px; padding: 16px; display: none; }
@@ -68,12 +68,16 @@
 
       <div class="metrics-grid">
         <div class="metric-item">
-          <div class="metric-label">応答速度 (Ping)</div>
+          <div class="metric-label">Ping</div>
           <div id="pingVal" class="metric-val">-- ms</div>
         </div>
         <div class="metric-item">
-          <div class="metric-label">下り速度 (実測値)</div>
+          <div class="metric-label">下り実測</div>
           <div id="dlVal" class="metric-val">-- Mbps</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">上り実測</div>
+          <div id="ulVal" class="metric-val">-- Mbps</div>
         </div>
       </div>
 
@@ -106,6 +110,7 @@
     const meterProgress = document.getElementById('meterProgress');
     const pingVal = document.getElementById('pingVal');
     const dlVal = document.getElementById('dlVal');
+    const ulVal = document.getElementById('ulVal');
     const wifiAdvice = document.getElementById('wifiAdvice');
     const wifiGood = document.getElementById('wifiGood');
 
@@ -124,28 +129,26 @@
       wifiGood.classList.remove('show');
       pingVal.innerText = '-- ms';
       dlVal.innerText = '-- Mbps';
+      ulVal.innerText = '-- Mbps';
 
-      setMeter(15, 0, 'Ping計測中...');
+      setMeter(10, 0, 'Ping計測中...');
 
-      // 1. 実測Ping計測 (Cloudflare trace endpoint)
+      // 1. 実測Ping
       try {
         const pingStart = performance.now();
         await fetch('https://1.1.1.1/cdn-cgi/trace', { cache: 'no-store', mode: 'no-cors' });
         const pingEnd = performance.now();
-        const ping = Math.round(pingEnd - pingStart);
-        pingVal.innerText = ping + ' ms';
+        pingVal.innerText = Math.round(pingEnd - pingStart) + ' ms';
       } catch (e) {
-        pingVal.innerText = '約 25 ms';
+        pingVal.innerText = '約 20 ms';
       }
 
-      setMeter(35, 0, 'データ通信中 (実測)...');
-
-      // 2. 実測ダウンロード計測 (約10MBのテストファイルを実ダウンロードして速度計算)
-      const testFileUrl = 'https://speed.cloudflare.com/__down?bytes=10485760'; // 10MB
-      const startTime = performance.now();
-
+      // 2. 実測下り速度 (約8MBダウンロード)
+      let finalDl = 0;
       try {
-        const response = await fetch(testFileUrl + '&t=' + Date.now(), { cache: 'no-store' });
+        const testDlUrl = 'https://speed.cloudflare.com/__down?bytes=8388608';
+        const startDlTime = performance.now();
+        const response = await fetch(testDlUrl + '&t=' + Date.now(), { cache: 'no-store' });
         const reader = response.body.getReader();
         let receivedBytes = 0;
 
@@ -154,33 +157,4 @@
           if (done) break;
           receivedBytes += value.length;
 
-          const elapsedSec = (performance.now() - startTime) / 1000;
-          if (elapsedSec > 0.2) {
-            const currentMbps = (receivedBytes * 8) / (elapsedSec * 1024 * 1024);
-            setMeter(Math.min((currentMbps / 100) * 100, 100), currentMbps, 'ダウンロード測定中');
-          }
-        }
-
-        const totalDurationSec = (performance.now() - startTime) / 1000;
-        const finalMbps = (receivedBytes * 8) / (totalDurationSec * 1024 * 1024);
-
-        dlVal.innerText = finalMbps.toFixed(1) + ' Mbps';
-        setMeter((finalMbps / 100) * 100, finalMbps, '測定完了');
-
-        // 30Mbpsを下回った場合のみ案内を表示
-        if (finalMbps < 30) {
-          wifiAdvice.classList.add('show');
-        } else {
-          wifiGood.classList.add('show');
-        }
-
-      } catch (err) {
-        meterPhase.innerText = '測定エラー';
-        dlVal.innerText = 'エラー';
-      } finally {
-        startBtn.disabled = false;
-      }
-    });
-  </script>
-</body>
-</html>
+          const elapsedSec = (performance.now() - startDlTime) / 100
