@@ -6,205 +6,49 @@
   <title>ネットワーク速度診断</title>
   <style>
     :root {
-      --bg: #090d16;
-      --card-bg: rgba(16, 24, 40, 0.85);
+      --card-bg: rgba(15, 23, 42, 0.72);
       --cyan: #00f2fe;
-      --purple: #7928ca;
+      --purple: #9333ea;
       --amber: #f59e0b;
-      --text: #f3f4f6;
-      --muted: #9ca3af;
+      --text: #f8fafc;
+      --muted: #cbd5e1;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: var(--bg); color: var(--text); min-height: 100vh; padding: 20px 16px; display: flex; flex-direction: column; align-items: center; }
-    .container { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 16px; }
-    .header { text-align: center; margin-bottom: 8px; }
-    .header h1 { font-size: 1.4rem; background: linear-gradient(135deg, var(--cyan), #9333ea); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .card { background: var(--card-bg); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
-    .meter-box { display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; height: 190px; }
-    .meter-circle { width: 170px; height: 170px; transform: rotate(-90deg); }
-    .meter-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 12; }
-    .meter-bar { fill: none; stroke: url(#grad); stroke-width: 12; stroke-dasharray: 440; stroke-dashoffset: 440; stroke-linecap: round; transition: stroke-dashoffset 0.15s ease-out; }
-    .meter-text { position: absolute; text-align: center; }
-    .meter-val { font-size: 2.6rem; font-weight: 700; color: #fff; line-height: 1; }
-    .meter-unit { font-size: 0.85rem; color: var(--cyan); margin-top: 4px; font-weight: 600; }
-    .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; text-align: center; }
-    .metric-item { background: rgba(255,255,255,0.03); border-radius: 10px; padding: 10px 4px; }
-    .metric-label { font-size: 0.72rem; color: var(--muted); }
-    .metric-val { font-size: 1rem; font-weight: 600; margin-top: 4px; }
-    .btn { background: linear-gradient(135deg, var(--cyan), var(--purple)); border: none; border-radius: 12px; color: #fff; font-size: 1rem; font-weight: 600; padding: 14px; width: 100%; cursor: pointer; }
-    .btn:disabled { opacity: 0.5; }
-    .advice-card { background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 14px; padding: 16px; display: none; }
-    .advice-card.show { display: block; }
-    .advice-title { color: var(--amber); font-weight: 600; font-size: 0.95rem; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
-    .advice-desc { font-size: 0.82rem; color: #d1d5db; line-height: 1.5; }
-    .advice-steps { margin-top: 10px; padding-left: 18px; font-size: 0.8rem; color: #fcd34d; line-height: 1.6; }
-    .good-card { background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 14px; padding: 14px; display: none; text-align: center; color: #34d399; font-size: 0.9rem; font-weight: 600; }
-    .good-card.show { display: block; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>ネットワーク速度診断</h1>
-    </div>
-
-    <div class="card">
-      <div class="meter-box">
-        <svg class="meter-circle" viewBox="0 0 160 160">
-          <defs>
-            <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#00f2fe" />
-              <stop offset="100%" stop-color="#7928ca" />
-            </linearGradient>
-          </defs>
-          <circle class="meter-bg" cx="80" cy="80" r="70"></circle>
-          <circle id="meterProgress" class="meter-bar" cx="80" cy="80" r="70"></circle>
-        </svg>
-        <div class="meter-text">
-          <div id="speedVal" class="meter-val">0</div>
-          <div id="meterPhase" class="meter-unit">待機中</div>
-        </div>
-      </div>
-
-      <div class="metrics-grid">
-        <div class="metric-item">
-          <div class="metric-label">Ping</div>
-          <div id="pingVal" class="metric-val">-- ms</div>
-        </div>
-        <div class="metric-item">
-          <div class="metric-label">下り実測</div>
-          <div id="dlVal" class="metric-val">-- Mbps</div>
-        </div>
-        <div class="metric-item">
-          <div class="metric-label">上り実測</div>
-          <div id="ulVal" class="metric-val">-- Mbps</div>
-        </div>
-      </div>
-
-      <button id="startBtn" class="btn" style="margin-top: 18px;">速度を測定する</button>
-    </div>
-
-    <div id="wifiAdvice" class="advice-card">
-      <div class="advice-title">
-        <span>⚠️</span> 通信速度が低下しています（30Mbps未満）
-      </div>
-      <div class="advice-desc">
-        遠くのWi-Fiルーターに接続されたままになっている可能性があります。一度Wi-Fiを切り替えて近くのルーターにつなぎ直してください。
-      </div>
-      <ol class="advice-steps">
-        <li>スマホのWi-Fiを一度 <b>OFF</b> にする</li>
-        <li><b>5秒間</b> 待つ</li>
-        <li>再度Wi-Fiを <b>ON</b> にして接続し直す</li>
-      </ol>
-    </div>
-
-    <div id="wifiGood" class="good-card">
-      ✅ 通信速度は良好です（快適に利用できます）
-    </div>
-  </div>
-
-  <script>
-    const startBtn = document.getElementById('startBtn');
-    const speedVal = document.getElementById('speedVal');
-    const meterPhase = document.getElementById('meterPhase');
-    const meterProgress = document.getElementById('meterProgress');
-    const pingVal = document.getElementById('pingVal');
-    const dlVal = document.getElementById('dlVal');
-    const ulVal = document.getElementById('ulVal');
-    const wifiAdvice = document.getElementById('wifiAdvice');
-    const wifiGood = document.getElementById('wifiGood');
-
-    const CIRCLE_LEN = 440;
-
-    function setMeter(percent, displaySpeed, label) {
-      const offset = CIRCLE_LEN - (CIRCLE_LEN * Math.min(percent, 100)) / 100;
-      meterProgress.style.strokeDashoffset = offset;
-      speedVal.innerText = typeof displaySpeed === 'number' ? displaySpeed.toFixed(1) : displaySpeed;
-      meterPhase.innerText = label;
+    
+    body {
+      /* 背景に風景写真を全画面で適用（暗めのグラデーションを重ねて視認性を確保） */
+      background: linear-gradient(rgba(10, 15, 30, 0.65), rgba(10, 15, 30, 0.8)),
+                  url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1080&q=80') center center / cover no-repeat fixed;
+      color: var(--text);
+      min-height: 100vh;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
-    startBtn.addEventListener('click', async () => {
-      startBtn.disabled = true;
-      wifiAdvice.classList.remove('show');
-      wifiGood.classList.remove('show');
-      pingVal.innerText = '-- ms';
-      dlVal.innerText = '-- Mbps';
-      ulVal.innerText = '-- Mbps';
+    .container { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 16px; }
+    .header { text-align: center; margin-bottom: 4px; }
+    .header h1 { font-size: 1.4rem; font-weight: 700; text-shadow: 0 2px 10px rgba(0,0,0,0.6); background: linear-gradient(135deg, #38bdf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    
+    /* 背景が透けるすりガラス調カード */
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.45);
+    }
 
-      setMeter(10, 0, 'Ping計測中...');
-
-      // 1. 実測Ping
-      try {
-        const pingStart = performance.now();
-        await fetch('https://1.1.1.1/cdn-cgi/trace', { cache: 'no-store', mode: 'no-cors' });
-        const pingEnd = performance.now();
-        pingVal.innerText = Math.round(pingEnd - pingStart) + ' ms';
-      } catch (e) {
-        pingVal.innerText = '約 20 ms';
-      }
-
-      // 2. 実測下り速度 (約8MBダウンロード)
-      let finalDl = 0;
-      try {
-        const testDlUrl = 'https://speed.cloudflare.com/__down?bytes=8388608';
-        const startDlTime = performance.now();
-        const response = await fetch(testDlUrl + '&t=' + Date.now(), { cache: 'no-store' });
-        const reader = response.body.getReader();
-        let receivedBytes = 0;
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          receivedBytes += value.length;
-
-          const elapsedSec = (performance.now() - startDlTime) / 1000;
-          if (elapsedSec > 0.2) {
-            const currentMbps = (receivedBytes * 8) / (elapsedSec * 1024 * 1024);
-            setMeter(Math.min((currentMbps / 100) * 100, 100), currentMbps, '下り測定中 (Mbps)');
-          }
-        }
-
-        const totalDlSec = (performance.now() - startDlTime) / 1000;
-        finalDl = (receivedBytes * 8) / (totalDlSec * 1024 * 1024);
-        dlVal.innerText = finalDl.toFixed(1) + ' Mbps';
-      } catch (e) {
-        dlVal.innerText = '測定エラー';
-      }
-
-      // 3. 実測上り速度 (約3MBアップロードPOST)
-      let finalUl = 0;
-      setMeter(15, 0, '上り測定中 (Mbps)...');
-      try {
-        const uploadSize = 3 * 1024 * 1024; // 3MB
-        const payload = new Uint8Array(uploadSize);
-        const startUlTime = performance.now();
-
-        await fetch('https://speed.cloudflare.com/__up', {
-          method: 'POST',
-          body: payload,
-          cache: 'no-store',
-          mode: 'cors'
-        });
-
-        const totalUlSec = (performance.now() - startUlTime) / 1000;
-        finalUl = (uploadSize * 8) / (totalUlSec * 1024 * 1024);
-        ulVal.innerText = finalUl.toFixed(1) + ' Mbps';
-        setMeter(Math.min((finalUl / 100) * 100, 100), finalUl, '上り完了');
-      } catch (e) {
-        // 万一CORS等で遮断された場合のフェイルセーフ計算
-        finalUl = finalDl > 0 ? (finalDl * 0.4) : 15;
-        ulVal.innerText = finalUl.toFixed(1) + ' Mbps';
-      }
-
-      // 判定処理 (下り速度30Mbps基準)
-      setMeter(0, finalDl, '測定完了');
-      if (finalDl < 30) {
-        wifiAdvice.classList.add('show');
-      } else {
-        wifiGood.classList.add('show');
-      }
-      startBtn.disabled = false;
-    });
-  </script>
-</body>
-</html>
+    .meter-box { display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; height: 190px; }
+    .meter-circle { width: 170px; height: 170px; transform: rotate(-90deg); }
+    .meter-bg { fill: none; stroke: rgba(255,255,255,0.12); stroke-width: 12; }
+    .meter-bar { fill: none; stroke: url(#grad); stroke-width: 12; stroke-dasharray: 440; stroke-dashoffset: 440; stroke-linecap: round; transition: stroke-dashoffset 0.15s ease-out; }
+    .meter-text { position: absolute; text-align: center; }
+    .meter-val { font-size: 2.6rem; font-weight: 700; color: #fff; line-height: 1; text-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+    .meter-unit { font-size: 0.85rem; color: #38bdf8; margin-top: 4px; font-weight: 600; }
+    
+    .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; text-align: center; }
+    .metric-item { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 12
